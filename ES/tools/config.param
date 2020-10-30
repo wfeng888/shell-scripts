@@ -1,0 +1,12 @@
+es_version=elasticsearch-5.4.3
+base_dir=/bigdata/dcvs-es
+http_host=10.45.156.201
+transport_host=10.45.156.201
+network_host=10.45.156.201
+http_port=9200
+transport_tcp_port=9300
+heap_size=2
+#running_mode:SINGLE/CLUSTER
+running_mode=SINGLE
+cluster_name=dcvs-es-5.4
+git_project_path=

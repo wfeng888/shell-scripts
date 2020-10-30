@@ -1,0 +1,43 @@
+[Unit]
+Description=Elasticsearch Cluster ${SUB_CLUSTERNAME}
+
+After=network.target
+After=syslog.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+User=elasticsearch
+Group=elastic
+
+Type=forking
+
+# Disable service start and stop timeout logic of systemd for mysqld service.
+TimeoutSec=0
+
+# Execute pre and post scripts as root
+PermissionsStartOnly=true
+
+# pre execute
+#ExecStartPre=
+
+# Start main service
+ExecStart=${SUB_PREFIX_ES_PATH}/scripts/start.sh
+
+ExecStop=${SUB_PREFIX_ES_PATH}/scripts/stop.sh
+
+
+# Use this to switch malloc implementation
+#EnvironmentFile=
+
+# Sets open_files_limit
+LimitNOFILE = 65536
+
+Restart=on-failure
+
+#RestartPreventExitStatus=1
+
+
+PrivateTmp=false
+

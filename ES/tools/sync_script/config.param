@@ -1,0 +1,5 @@
+sync_es_http_ip=10.45.156.201
+sync_es_http_port=9400
+cluster_name=dcvs-es-5.4
+list_file=batch.lst
+git_project_path=
