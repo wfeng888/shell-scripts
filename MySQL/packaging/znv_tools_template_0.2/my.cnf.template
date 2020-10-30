@@ -1,0 +1,84 @@
+[client]
+port                            =${SUB_PORT}
+
+[mysql]
+default-character-set           =utf8mb4
+
+[mysqld]
+port                            =${SUB_PORT}
+
+basedir                         =${SUB_MYSQL_BASE}
+plugin-dir                      =${SUB_MYSQL_BASE}/lib/plugin
+datadir                         =${SUB_PREFIX_DATA_PATH}/data
+pid_file                        =${SUB_PREFIX_DATA_PATH}/var/${SUB_PORT}.pid
+socket                          =${SUB_PREFIX_DATA_PATH}/var/${SUB_PORT}.socket
+
+
+lc-messages-dir                 =${SUB_MYSQL_BASE}/share/english
+character-set-server            =utf8mb4
+server-id                       =${SUB_SERVER_ID}
+
+default-storage-engine          =INNODB
+innodb_file_format              =barracuda
+innodb_file_format_max          =barracuda
+innodb_file_per_table           =1
+innodb_log_buffer_size          =16M
+innodb_buffer_pool_size         =2048M
+innodb_log_files_in_group       =2
+innodb_thread_concurrency       =32
+innodb_flush_log_at_trx_commit  =1
+sync_binlog                     =1
+
+
+thread_cache_size               =8
+max_connections                 =1000
+group_concat_max_len            =102400
+
+event_scheduler                 =${SUB_EVENT_SCHEDULER}
+show_compatibility_56           =on
+read_only                       =${SUB_READ_ONLY}
+super_read_only                 =${SUB_READ_ONLY}
+log-bin-trust-function-creators =ON
+
+
+slow-query-log                  =ON
+slow_query_log_file             =${SUB_PREFIX_DATA_PATH}/log/slow.log
+long_query_time                 =2
+log_slow_slave_statements       =ON
+binlog_format                   =ROW
+expire_logs_days                =60
+log_bin                         =${SUB_PREFIX_DATA_PATH}/log/binlog
+log_bin_index                   =${SUB_PREFIX_DATA_PATH}/log/binlog.index
+log_error                       =${SUB_PREFIX_DATA_PATH}/log/log.err
+relay_log                       =${SUB_PREFIX_DATA_PATH}/log/relay_log
+relay_log_index                 =${SUB_PREFIX_DATA_PATH}/log/relay_log.index
+relay_log_info_file             =${SUB_PREFIX_DATA_PATH}/log/relay-log.info
+general_log_file                =${SUB_PREFIX_DATA_PATH}/log/general.log
+
+
+master_info_repository          =TABLE
+relay_log_info_repository       =TABLE
+log_slave_updates               =ON
+gtid_mode                       =on
+enforce_gtid_consistency        =on
+max_binlog_size                 =512M
+innodb_log_file_size            =128M
+innodb_log_files_in_group       =2
+
+
+
+
+query_cache_size                =0
+tmp_table_size                  =64M
+myisam_max_sort_file_size       =10G
+myisam_sort_buffer_size         =30M
+key_buffer_size                 =0
+read_buffer_size                =64K
+read_rnd_buffer_size            =256K
+sort_buffer_size                =512K
+bulk_insert_buffer_size         =64M
+max_allowed_packet              =64M
+
+
+sql_mode                        =NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,ONLY_FULL_GROUP_BY
+

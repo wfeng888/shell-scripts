@@ -1,0 +1,8 @@
+ip=10.45.154.51
+port=3301
+password=zxm10
+user=super_op
+mysqlbase=/usr/local/znv/mysql-5.7.27-el7-x86_64
+restore_mode=insert
+#restore_mode="insert|replace"
+#skip_restore_table=etis_dictnry_tab,etis_role_tab

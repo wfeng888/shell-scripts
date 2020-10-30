@@ -1,0 +1,3 @@
+mysql_software_version=mysql-5.7.27-el7-x86_64
+znvdata_version=ZNV_DCVS_0.1_MySQL_5.7.27_20190610
+znv_tools_template=znv_tools_template_0.2

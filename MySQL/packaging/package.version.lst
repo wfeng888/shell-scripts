@@ -1,0 +1,4 @@
+mysql_software_package_path=/database/mysql-5.7.25-el7-x86_64.tar.gz
+znvdata_version=ZNV_DEMO_0.1_MySQL_5.7.25_20190610
+code_library=/root/workspace/DVCS_DailyBuid
+mysql_data_base=/database/mysql/my3306/ZNV_DEMO_0.1_MySQL_5.7.27_2019-10-21-11-43-47
