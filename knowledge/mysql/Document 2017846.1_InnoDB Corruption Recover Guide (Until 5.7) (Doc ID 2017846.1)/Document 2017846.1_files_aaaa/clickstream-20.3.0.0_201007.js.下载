@@ -1,0 +1,21 @@
+/* 
+ * script related to omniture log
+ */
+
+var OMNITURE_MAX_PROP_NO = 9;
+
+function logOmnitureTrackLink(linkName, propArray) {
+ //  Removing omniture itegration, so leaving stub method 
+}
+
+function logOmnitureTrackClickEvent(pageName,actionCategory,actionType, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15) {
+   //  Removing omniture itegration, so leaving stub method  
+}
+
+function logOmnitureTrackView(pageName, propArray) {
+    //  Removing omniture itegration, so leaving stub method
+}
+
+function simpleTestCallOne(pageName, props) {
+    //  Removing omniture itegration, so leaving stub method 
+}
