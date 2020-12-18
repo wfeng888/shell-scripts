@@ -1,44 +1,67 @@
 #!/bin/bash
-# for hadoop-env.sh
-cpwd=$(cd `dirname $0`;pwd)
-basedir="${cpwd%/*}"
+# for hadoop version 2.10.1
+#placed in /etc/profile.d/
+basedir="/home/bigdata/hadoop/public"
+hdfs_basedir="/home/bigdata/hadoop/hdfs"
+yarn_basedir="/home/bigdata/hadoop/yarn"
+mapred_basedir="/home/bigdata/hadoop/mapred"
 
 # for public
-export JAVA_HOME=""
-export HADOOP_HOME=""
-export HADOOP_CLASSPATH=""
-export HADOOP_CLIENT_OPTS=""
-export HADOOP_SECURE_DN_USER=""
-export HADOOP_CONF_DIR="${basedir}/etc/hadoop"
-export HADOOP_PID_DIR=${basedir}/var
-export HADOOP_LOG_DIR=${basedir}/log
-export YARN_HEAPSIZE=2048
-export HADOOP_HEAPSIZE=2048
+JAVA_HOME="/usr/java/java-se-7u75-ri"
+CLASS_PATH=".:${JAVA_HOME}/lib/dt.jar:${JAVA_HOME}/lib/tools.jar:${JAVA_HOME}/lib/sa-jdi.jar:${JAVA_HOME}/lib/jconsole.jar"
+HADOOP_HOME="/usr/local/hadoop-stable"
+HADOOP_PREFIX="${HADOOP_HOME}"
+HADOOP_CLASSPATH="${CLASS_PATH}"
+HADOOP_CLIENT_OPTS=""
+HADOOP_SECURE_DN_USER=""
+HADOOP_PID_DIR=${hdfs_basedir}/var
+HADOOP_LOG_DIR=${hdfs_basedir}/log
+HADOOP_HEAPSIZE=2048
 
+
+# for hdfs daemon
+HADOOP_CONF_DIR="${basedir}/etc/hadoop"
 
 # for NameNode
-export HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC"
+HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC"
 
 
 # for SecondaryNameNode
-export HADOOP_SECONDARYNAMENODE_OPTS=""
+HADOOP_SECONDARYNAMENODE_OPTS=""
 
 # for DataNode
-export HADOOP_DATANODE_OPTS=""
+HADOOP_DATANODE_OPTS=""
 
+
+# for yarn daemon
+YARN_HEAPSIZE=2048
+HADOOP_YARN_HOME="${HADOOP_HOME}"
+HADOOP_YARN_USER=yarn
+YARN_CONF_DIR="${basedir}/etc/hadoop"
+YARN_LOG_DIR="${yarn_basedir}/log"
+YARN_POLICYFILE=""
+YARN_OPTS=""
+JAVA_LIBRARY_PATH=""
+YARN_ROUTER_OPTS=""
 
 #for yarn_resourcemanager
-export YARN_RESOURCEMANAGER_OPTS=""
-export YARN_RESOURCEMANAGER_HEAPSIZE=2048
+YARN_RESOURCEMANAGER_OPTS=""
+YARN_RESOURCEMANAGER_HEAPSIZE=2048
 
 #for yarn_nodemanager
-export YARN_NODEMANAGER_OPTS=""
-export YARN_NODEMANAGER_HEAPSIZE=2048
+YARN_NODEMANAGER_OPTS=""
+YARN_NODEMANAGER_HEAPSIZE=2048
 
 #for yarn_proxyserver
-export YARN_PROXYSERVER_OPTS=""
-export YARN_PROXYSERVER_HEAPSIZE=2048
+YARN_PROXYSERVER_OPTS=""
+YARN_PROXYSERVER_HEAPSIZE=2048
+
+
+
+#for mapreduce daemon
 
 #for job_historyserver
-export HADOOP_JOB_HISTORYSERVER_OPTS=""
-export HADOOP_JOB_HISTORYSERVER_HEAPSIZE=2048
+HADOOP_JOB_HISTORYSERVER_OPTS=""
+HADOOP_JOB_HISTORYSERVER_HEAPSIZE=2048
+HADOOP_MAPRED_PID_DIR="${mapred_basedir}/var"
+HADOOP_MAPRED_LOG_DIR="${mapred_basedir}/log"
