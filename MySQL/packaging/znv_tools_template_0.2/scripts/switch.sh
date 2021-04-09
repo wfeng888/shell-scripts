@@ -5,8 +5,8 @@ to_master='TO_MASTER'
 to_backup='TO_BACKUP'
 switch_fail_flag='SEND_MSG'
 port=$1
-mysql=${SUB_MYSQL_BASE}/bin/mysql
-db_dir=${SUB_PREFIX_DATA_PATH}
+#mysql=${SUB_MYSQL_BASE}/bin/mysql
+#db_dir=${SUB_PREFIX_DATA_PATH}
 sec_behind=
 timeout=600
 waittime=0
@@ -16,7 +16,7 @@ sleeptime=10
 slave_not_running="Critical error !the mysql switch failed . the mysql slave thread may be not running! "
 strategy_forever=0
 stragety_until=1
-ops_username="autoOPS"
+#ops_username="autoOPS"
 #strategy 
 #0:loop until slave and master has consistence data. 
 #1:loop  before slave and master become consistence  until timeout

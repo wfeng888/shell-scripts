@@ -1,21 +1,35 @@
 #! /bin/bash
+
+cur_dir=$(cd `dirname $0`;pwd)
+source ${cur_dir}/set_param.sh 
 port=$1
-cpwd=$(cd `dirname $0`; pwd)
-mysql=${SUB_MYSQL_BASE}/bin/mysql
+
+if [  "${db_dir}X" == "X"  -o "${mysql}X" == "X"  -o "${ops_username}X" == "X" -o "${port}X" == "X" ] ; then 
+	${cur_dir}/send_mail.sh "warning" "SEND_MSG"  "${port}" "Automatic backup failed,Manual intervention is needed! "
+	exit 1
+fi;
+
+if [ "${expire_days}X" == "X" ] ; then 
+	expire_days=30
+fi
+if [ ${expire_days} -lt 15 ] ; then 
+	expire_days=15
+fi
+
+#mysql=${SUB_MYSQL_BASE}/bin/mysql
 read_only_off='OFF'
 read_only_on='ON'
 cur_day=`date +%Y-%m-%d`
-backup_base_dir=${SUB_BACKUP_BASE}/backup/my${port}
+backup_base_dir=${backup_base_dir}/backup/my${port}
 binlog_backup_base_dir=${backup_base_dir}/binlog
 xtrabackup=/usr/bin/xtrabackup
-db_dir=${SUB_PREFIX_DATA_PATH}
+#db_dir=${SUB_PREFIX_DATA_PATH}
 my_config=${db_dir}/my.cnf
-expire_time=30
 digit=
 last_sunday=
 binlog_index=
 statement_flush="flush binary logs;"
-ops_username="autoOPS"
+#ops_username="autoOPS"
 
 is_readonly(){
 local flag=1
@@ -72,7 +86,11 @@ $xtrabackup --defaults-file=$my_config --login-path=${port} -u${ops_username} --
 }
 
 remove_expire_backup(){
-echo "not supported!"
+if [  -d  "${backup_base_dir}" -a "${backup_base_dir}" =~ backup ] ; then 
+	v_pwd=`pwd`
+	cd "${backup_base_dir}"
+	find . -maxdepth 1 -mtime +${expire_days} -regex './[0-9]*-[0-9]*-[0-9]*'  -execdir rm -fr {} \;
+	cd "${v_pwd}"
 }
 
 query_without_response(){
@@ -104,7 +122,7 @@ return 0
 }
 
 [ ! -d "${backup_base_dir}" ] && mkdir -p  "${backup_base_dir}"
-
+remove_expire_backup
 if [ ! `can_backup` ] ; then
 	echo " we won't backup  on this instance." 
 else
@@ -128,7 +146,7 @@ else
 
 	echo " backup end  `date '+%Y-%m-%d %H:%M:%S'` " >> "${backup_base_dir}/${cur_day}/record.log"
 
-	[ ! `is_backup_ok  "${backup_base_dir}/${cur_day}"`  ] && ${cpwd}/send_mail.sh "warning" "SEND_MSG"  "${port}" "Automatic backup failed,Manual intervention is needed! "
+	[ ! `is_backup_ok  "${backup_base_dir}/${cur_day}"`  ] && ${cur_dir}/send_mail.sh "warning" "SEND_MSG"  "${port}" "Automatic backup failed,Manual intervention is needed! "
 fi;
 if [  `is_master` ] ; then 
 echo "backup binlog!"

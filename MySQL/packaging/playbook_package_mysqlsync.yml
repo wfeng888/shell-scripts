@@ -1,0 +1,64 @@
+---
+- hosts: mysql1
+  vars:
+    project_name: DCVS-DB
+    project_url: git@10.45.156.100:DCVS/DCVS-DB.git
+    flag_dirctory: /success
+    base_dir: /root/codelibrary/mysqlsync
+    #branch: rhbb_1230
+    branch: master
+    download_git: True
+    git_hash: ""
+    git_date: ""
+  remote_user: root
+  tasks:
+    - name: remove directory if exists
+      file:
+        path: "{{ base_dir }}/{{  project_name }}"
+        state: absent
+      when: download_git == True
+      notify:
+        - prepare flag directory
+        - remove exists files
+    - name: download git project codes
+      command: git clone -b {{ branch }} {{ project_url }}  "{{ base_dir }}/{{  project_name }}"
+      when: download_git == True
+    - name: prepare package script
+      copy:
+        src: "{{ base_dir }}/{{ project_name }}/packaging/sync_scripts/{{ item }}"
+        dest: "{{ base_dir }}/{{ item }}"
+        force: yes
+        backup: yes
+      loop:
+        - package.sh
+        - predefine.sh
+        - set_param.sh
+        - msort.sh
+        - ../push_git.sh
+    - name: grant execute privilege
+      command: chmod u+x "{{ base_dir }}/{{ item }}"
+      loop:
+        - package.sh
+        - predefine.sh
+        - set_param.sh
+        - msort.sh
+    - name: make a release package
+      shell: "{{ base_dir }}/package.sh  {{ git_hash }}   \"{{ git_date }}\" "
+      notify:
+        - prepare flag directory
+        - confirm success
+  handlers:
+    - name: confirm success
+      file:
+        path: /success/s
+        state: touch
+    - name: make flag
+      file:
+        path: /success/r
+        state: touch
+      listen: remove exists files
+    - name: prepare flag directory
+      file:
+        path: /success
+        state: directory
+

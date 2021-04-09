@@ -26,32 +26,47 @@ mkdir -p ${tmp_dir}/znvtools/log
 mkdir -p ${tmp_dir}/znvtools/var
 mkdir -p ${tmp_dir}/znvtools/scripts
 cat ./config/keepalived.conf |sed -e 's:${SUB_KEEPALIVED_BASE}:'"$mysql_data_path"':g' -e 's:${SUB_PORT}:'${mysql_port}':g' -e 's:${SUB_KEEPALIVED_STATE}:'${keepalived_master}':g' -e 's:${SUB_KEEPALIVED_PRIORITY}:'${keepalived_master_priority}':g' -e 's:${SUB_VIP}:'${vip}':g' > ${tmp_dir}/znvtools/config/keepalived.conf
+cp ./scripts/*  ${tmp_dir}/znvtools/scripts/
 
-replace_param   "./scripts/backup.sh"  "${tmp_dir}/znvtools/scripts/backup.sh"
-replace_param  "./scripts/check_mysql_status.sh"  "${tmp_dir}/znvtools/scripts/check_mysql_status.sh"
-replace_param  "./scripts/check.sh"   "${tmp_dir}/znvtools/scripts/check.sh"
-replace_param  "./scripts/check_trap.sh"  "${tmp_dir}/znvtools/scripts/check_trap.sh"
+
+#replace_param   "./scripts/backup.sh"  "${tmp_dir}/znvtools/scripts/backup.sh"
+#replace_param  "./scripts/check_mysql_status.sh"  "${tmp_dir}/znvtools/scripts/check_mysql_status.sh"
+#replace_param  "./scripts/check.sh"   "${tmp_dir}/znvtools/scripts/check.sh"
+#replace_param  "./scripts/check_trap.sh"  "${tmp_dir}/znvtools/scripts/check_trap.sh"
 replace_param  "./scripts/send_mail.pl"  "${tmp_dir}/znvtools/scripts/send_mail.pl"
-replace_param  "./scripts/switch.sh"  "${tmp_dir}/znvtools/scripts/switch.sh"
-replace_param  "./scripts/mysql_oper.sh"  "${tmp_dir}/znvtools/scripts/mysql_oper.sh"
+#replace_param  "./scripts/switch.sh"  "${tmp_dir}/znvtools/scripts/switch.sh"
+#replace_param  "./scripts/mysql_oper.sh"  "${tmp_dir}/znvtools/scripts/mysql_oper.sh"
 replace_param  "./scripts/keepalived.service" "${tmp_dir}/znvtools/scripts/keepalived.service"
 replace_param  "./scripts/mysql.service" "${tmp_dir}/znvtools/scripts/mysql.service"
-replace_param  "./scripts/mysql.server.fake" "${tmp_dir}/znvtools/scripts/mysql.server.fake"
+#replace_param  "./scripts/mysql.server.fake" "${tmp_dir}/znvtools/scripts/mysql.server.fake"
+
+cat > "${tmp_dir}/znvtools/scripts/config.param" <<EOF
+mysql_software_base=${mysql_software_prefix}/${mysql_software_version}
+mysql_path=
+mysqld_safe=
+db_dir=${mysql_data_path}
+backup_base_dir=${backup_base}
+expire_days=30
+EOF
+
 replace_infile "${cpwd}/start.sh"
 replace_infile "${cpwd}/stop.sh"
 replace_infile "${cpwd}/uninstall.sh"
 
 
-cp  ./scripts/automatic_backup.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/get_ip.pl  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/notify_backup.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/notify_master.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/start.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/stop.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/tools.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/writelog.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/check_mysql_status_with_log.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/send_mail.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/automatic_backup.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/get_ip.pl  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/notify_backup.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/notify_master.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/start.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/stop.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/tools.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/writelog.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/check_mysql_status_with_log.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/send_mail.sh  ${tmp_dir}/znvtools/scripts/
+
+
+
 
 cp -a ${tmp_dir}/znvtools "${mysql_data_path}/"
 
@@ -83,7 +98,7 @@ echo "configure mysql database files !"
 ${mysql_software_prefix}/${mysql_software_version}/bin/mysql  -u${conn_username}  ${use_pwd} --socket=${mysql_data_path}/var/${mysql_port}.socket -e "reset master ; reset slave all;"  
 
 #create ops user
-v_sql="create user IF NOT EXISTS ${ops_username}@\"%\" identified by \"${ops_password}\";alter user  ${ops_username}@\"%\" identified by \"${ops_password}\";grant all on *.* to ${ops_username}@\"%\";flush privileges;"
+v_sql="create user IF NOT EXISTS ${ops_username}@\"%\" identified by \"${ops_password}\";alter user  ${ops_username}@\"%\" identified by \"${ops_password}\";grant all on *.* to ${ops_username}@\"%\" with grant option;flush privileges;"
 create_opsuser "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" ${conn_username}  "${mysql_data_path}/var/${mysql_port}.socket"  "${conn_userpwd}"  "${msg_create_opsuer_success}"  "${msg_create_opsuer_fail}" "${msg_create_opsuer_tip}" "${v_sql}" "${ops_username}"  "${ops_password}"  
 
 #create repl user
@@ -116,7 +131,9 @@ done
 
 fi;
 
-
+echo "install backup software"
+[ -e "${backup_software_gzpath}" ] && tar -xzpvf ${backup_software_gzpath} > /dev/null
+[ -d "${backup_software_gzpath%%.*}" ] && rpm -ivUh  "${backup_software_gzpath%%.*}/*"
 
 echo "configure project file "
 mk_project_file "${project_name}"  "${mysql_software_prefix}/${mysql_software_version}" "${mysql_data_path}" 

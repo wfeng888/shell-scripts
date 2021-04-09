@@ -415,9 +415,17 @@ l_value=`echo "${1}"|awk -F ';' -v  p_name="${2}=" '{for(i=1;i<=NF;i++){if($i ~ 
 return 1
 }
 
+check_log_error(){
+#1 logfile
+[ `grep -E 'ERROR [0-9]+ \([0-9a-zA-Z]+\) at line' $1|wc -l ` -gt 0 ] && return 1
+return 0
+}
+
 
 cpwd=$(cd `dirname $0`; pwd)
-source ${cpwd}/env.conf
+if test -r "${cpwd}/env.conf" ; then 
+source "${cpwd}/env.conf"
+fi
 projectFilePath="/etc/znvTab"
 version_file=${cpwd}/version.lst
 config_file=${cpwd}/config.param
@@ -445,6 +453,7 @@ pname_application_userpasswd="application_userpasswd"
 pname_skip_mysql_software="skip_mysql_software"
 pname_mysqlsoftwarepath="mysqlsoftwarepath"
 pname_mysqlDataPath="mysqlDataPath"
+pname_backup_software_gzpath="backup_software_gzpath"
 
 msg_file_not_found=" file not found.please check! "
 msg_auto_backup_tip="configure auto backup..."
@@ -494,7 +503,7 @@ mysql_port=`get_value ${pname_mysql_port} ${config_file}`
 mysql_data_base=`get_value ${pname_mysql_data_path} ${config_file}`
 #slave_hostip=`get_param_value ${pname_slave_hostip}  ${config_file} `
 #master_hostip=`get_value ${pname_master_hostip} ${config_file}`
-#backup_base=`get_param_value ${pname_backup_base}  ${config_file} `
+backup_base=`get_param_value ${pname_backup_base}  ${config_file} `
 #vip=`get_param_value ${pname_vip}  ${config_file} `
 mysql_software_version=`get_value ${pname_mysql_software_version}  ${version_file}`
 znvdata_version=`get_value ${pname_znvdata_version} ${version_file}`
@@ -512,6 +521,7 @@ znv_tools_file=`get_value ${pname_znv_tools_file} ${version_file} ${default_znv_
 application_username=`get_value ${pname_application_username} ${config_file} ${default_application_username}`
 application_userpasswd=`get_value ${pname_application_userpasswd} ${config_file} ${default_application_userpwd}`
 skip_mysql_software=`get_value ${pname_skip_mysql_software} ${config_file}`
+backup_software_gzpath=`get_value ${pname_backup_software_gzpath} ${config_file}`
 
 
 running_mode_master_slave="MASTER_SLAVE"

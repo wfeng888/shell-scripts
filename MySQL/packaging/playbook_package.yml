@@ -1,0 +1,51 @@
+---
+- hosts: mysql1
+  vars:
+    project_name: DCVS-DB
+    project_url: git@10.45.156.100:DCVS/DCVS-DB.git
+    flag_dirctory: /success
+    #branch: rhbb_1230
+    branch: master
+  remote_user: root
+  tasks:
+
+    - name: remove directory if exists
+      file:
+        path: /root/codelibrary/p1/{{  project_name }}
+        state: absent
+      notify:
+        - prepare flag directory
+        - remove exists files
+    - name: download git project codes
+      command: git clone -b {{ branch }} {{ project_url }}  /root/codelibrary/p1/{{ project_name }}
+    - name: prepare package script
+      copy:
+        src: "/root/codelibrary/p1/{{ project_name }}/packaging/{{ item }}"
+        dest: "/root/codelibrary/p1/{{ item }}"
+        force: yes
+        backup: yes
+      loop:
+        - autoPackage.sh
+        - push_git.sh
+        - set_param.sh
+    - name: grant execute privilege
+      command: chmod u+x /root/codelibrary/p1/autoPackage.sh
+    - name: make a release package
+      shell: /root/codelibrary/p1/autoPackage.sh
+      notify:
+        - prepare flag directory
+        - confirm success
+  handlers:
+    - name: confirm success
+      file:
+        path: /success/s
+        state: touch
+    - name: make flag
+      file:
+        path: /success/r
+        state: touch
+      listen: remove exists files
+    - name: prepare flag directory
+      file:
+        path: /success
+        state: directory

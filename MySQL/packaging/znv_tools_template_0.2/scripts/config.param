@@ -1,0 +1,6 @@
+mysql_software_base=
+mysql_path=
+mysqld_safe=
+db_dir=
+backup_base_dir=
+expire_days=

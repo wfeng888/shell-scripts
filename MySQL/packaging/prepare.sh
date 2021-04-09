@@ -144,7 +144,7 @@ local user=$2
 local socket=$3
 local usepwd=` [ $4 ] && echo "-p$4" ` 
 
-${mysql} -u${user} ${usepwd}  --socket=${socket} -f <<!
+${mysql} -u${user} ${usepwd}  --socket=${socket} -N -f <<!
 ${5}
 !
 }
@@ -398,6 +398,7 @@ pname_mysql_software_prefix="mysql_software_prefix"
 pname_znv_tools_file="znv_tools_template"
 pname_application_username="application_username"
 pname_application_userpasswd="application_userpasswd"
+pname_backup_software_gzpath="backup_software_gzpath"
 
 msg_file_not_found=" file not found.please check! "
 msg_auto_backup_tip="configure auto backup..."
@@ -463,6 +464,7 @@ running_mode=`get_param_value ${pname_mode}  ${config_file} `
 znv_tools_file=`get_param_value_with_default ${pname_znv_tools_file}  ${version_file} ${default_znv_tools_template}`
 application_username=`get_param_value_with_default ${pname_application_username}  ${config_file} ${default_application_username}`
 application_userpasswd=`get_param_value_with_default ${pname_application_userpasswd}  ${config_file} ${default_application_userpwd}`
+backup_software_gzpath=`get_param_value ${pname_backup_software_gzpath} ${config_file}`
 running_mode_master_slave="MASTER_SLAVE"
 running_mode_single="SINGLE"
 use_pwd=
@@ -639,28 +641,37 @@ mkdir -p ${tmp_dir}/znvtools/log
 mkdir -p ${tmp_dir}/znvtools/var
 mkdir -p ${tmp_dir}/znvtools/scripts
 cat ./config/keepalived.conf |sed -e 's:${SUB_KEEPALIVED_BASE}:'"$mysql_data_path"':g' -e 's:${SUB_PORT}:'${mysql_port}':g' -e 's:${SUB_KEEPALIVED_STATE}:'${keepalived_master}':g' -e 's:${SUB_KEEPALIVED_PRIORITY}:'${keepalived_master_priority}':g' -e 's:${SUB_VIP}:'${vip}':g' > ${tmp_dir}/znvtools/config/keepalived.conf
-
-replace_param   "./scripts/backup.sh"  "${tmp_dir}/znvtools/scripts/backup.sh"
-replace_param  "./scripts/check_mysql_status.sh"  "${tmp_dir}/znvtools/scripts/check_mysql_status.sh"
-replace_param  "./scripts/check.sh"   "${tmp_dir}/znvtools/scripts/check.sh"
-replace_param  "./scripts/check_trap.sh"  "${tmp_dir}/znvtools/scripts/check_trap.sh"
+cp ./scripts/*  ${tmp_dir}/znvtools/scripts/
+#replace_param   "./scripts/backup.sh"  "${tmp_dir}/znvtools/scripts/backup.sh"
+#replace_param  "./scripts/check_mysql_status.sh"  "${tmp_dir}/znvtools/scripts/check_mysql_status.sh"
+#replace_param  "./scripts/check.sh"   "${tmp_dir}/znvtools/scripts/check.sh"
+#replace_param  "./scripts/check_trap.sh"  "${tmp_dir}/znvtools/scripts/check_trap.sh"
 replace_param  "./scripts/send_mail.pl"  "${tmp_dir}/znvtools/scripts/send_mail.pl"
-replace_param  "./scripts/switch.sh"  "${tmp_dir}/znvtools/scripts/switch.sh"
-replace_param  "./scripts/mysql_oper.sh"  "${tmp_dir}/znvtools/scripts/mysql_oper.sh"
+#replace_param  "./scripts/switch.sh"  "${tmp_dir}/znvtools/scripts/switch.sh"
+#replace_param  "./scripts/mysql_oper.sh"  "${tmp_dir}/znvtools/scripts/mysql_oper.sh"
 replace_param  "./scripts/keepalived.service" "${tmp_dir}/znvtools/scripts/keepalived.service"
 replace_param  "./scripts/mysql.service" "${tmp_dir}/znvtools/scripts/mysql.service"
-replace_param  "./scripts/mysql.server.fake" "${tmp_dir}/znvtools/scripts/mysql.server.fake"
+#replace_param  "./scripts/mysql.server.fake" "${tmp_dir}/znvtools/scripts/mysql.server.fake"
 
-cp  ./scripts/automatic_backup.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/get_ip.pl  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/notify_backup.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/notify_master.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/start.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/stop.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/tools.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/writelog.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/check_mysql_status_with_log.sh  ${tmp_dir}/znvtools/scripts/
-cp  ./scripts/send_mail.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/automatic_backup.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/get_ip.pl  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/notify_backup.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/notify_master.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/start.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/stop.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/tools.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/writelog.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/check_mysql_status_with_log.sh  ${tmp_dir}/znvtools/scripts/
+#cp  ./scripts/send_mail.sh  ${tmp_dir}/znvtools/scripts/
+
+cat > "${tmp_dir}/znvtools/scripts/config.param" <<EOF
+mysql_software_base=${mysql_software_prefix}/${mysql_software_version}
+mysql_path=
+mysqld_safe=
+db_dir=${mysql_data_path}
+backup_base_dir=${backup_base}
+expire_days=30
+EOF
 
 cp -a ${tmp_dir}/znvtools "${mysql_data_path}/"
 cp -a ${tmp_dir}/znvtools ${tmp_dir}/znvtools_for_slave
@@ -688,6 +699,7 @@ mkdir -p ${tmp_dir}/for_slave
 mv ${tmp_dir}/znvtools_for_slave.tar.gz ${tmp_dir}/for_slave/
 cp "${cpwd}/${mysql_software_version}${file_suffix}"  ${tmp_dir}/for_slave/
 cp "${cpwd}/${znvdata_version}${file_suffix}"  ${tmp_dir}/for_slave/
+cp "${cpwd}/${backup_software_gzpath}"  ${tmp_dir}/for_slave/
 
 echo "starting mysql database  !"
 rm -f ${mysql_data_path}/data/auto.cnf
@@ -705,7 +717,7 @@ echo "configure mysql database files !"
 ${mysql_software_prefix}/${mysql_software_version}/bin/mysql  -u${conn_username}  ${use_pwd} --socket=${mysql_data_path}/var/${mysql_port}.socket -e "reset master ; reset slave all;"  
 
 #create ops user
-v_sql="create user IF NOT EXISTS ${ops_username}@\"%\" identified by \"${ops_password}\";alter user  ${ops_username}@\"%\" identified by \"${ops_password}\";grant all on *.* to ${ops_username}@\"%\";flush privileges;"
+v_sql="create user IF NOT EXISTS ${ops_username}@\"%\" identified by \"${ops_password}\";alter user  ${ops_username}@\"%\" identified by \"${ops_password}\";grant all on *.* to ${ops_username}@\"%\" with grant option;flush privileges;"
 create_opsuser "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" ${conn_username}  "${mysql_data_path}/var/${mysql_port}.socket"  "${conn_userpwd}"  "${msg_create_opsuer_success}"  "${msg_create_opsuer_fail}" "${msg_create_opsuer_tip}" "${v_sql}" "${ops_username}"  "${ops_password}"  
 
 #create repl user
@@ -716,10 +728,21 @@ create_opsuser "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" ${
 if [ ${application_userpasswd} ] ; then
 v_sql="create user IF NOT EXISTS ${application_username}@\"%\" identified by \"${application_userpasswd}\";alter user  ${application_username}@\"%\" identified by \"${application_userpasswd}\";flush privileges;"
 create_opsuser "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" ${conn_username}  "${mysql_data_path}/var/${mysql_port}.socket"  "${conn_userpwd}"  "${msg_create_app_user_success}"  "${msg_create_app_user_fail}" "${msg_create_app_user_tip}" "${v_sql}"  "${application_username}"  "${application_userpasswd}"  "${master_hostip}" "${mysql_port}"
-for db in dcvs  dcvs_auth  dcvs_apinetwork  metadata_schema dcvs_schedule  nacos
+#for db in dcvs  dcvs_auth  dcvs_apinetwork  metadata_schema dcvs_schedule  nacos
+#do
+#v_sql="grant create view,Select,Delete,Insert,Lock tables,References,Execute,Trigger,Update,Usage on ${db}.* to ${application_username};flush privileges;"
+#execute_sql "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" "${conn_username}"  "${mysql_data_path}/var/${mysql_port}.socket"   "${conn_userpwd}"  "${v_sql}"
+#done
+# grant privileges
+execute_sql "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" "${conn_username}"  "${mysql_data_path}/var/${mysql_port}.socket"   "${conn_userpwd}" "show databases;"  |grep -v -i '+'|while
+read db_name
 do
-v_sql="grant create view,Select,Delete,Insert,Lock tables,References,Execute,Trigger,Update,Usage on ${db}.* to ${application_username};flush privileges;"
-execute_sql "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" "${conn_username}"  "${mysql_data_path}/var/${mysql_port}.socket"   "${conn_userpwd}"  "${v_sql}"
+  if [  `check_between  ${db_name}  "performance_schema"  "information_schema"  "mysql"  "sys" ` -eq 1 ] ; then
+       v_sql="grant create view,Select,Delete,Insert,Lock tables,References,Execute,Trigger,Update,Usage on ${db_name}.* to ${application_username};flush privileges;"
+  else
+       v_sql="grant Select,Usage on ${db_name}.* to ${application_username};flush privileges;"
+  fi
+  execute_sql "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" "${conn_username}"  "${mysql_data_path}/var/${mysql_port}.socket"   "${conn_userpwd}"  "${v_sql}"
 done
 
 for db in data_collection
@@ -763,6 +786,10 @@ echo "config mysql service "
 config_mysql_service
 check_mysql_until_timeout  "${mysql_software_prefix}/${mysql_software_version}/bin/mysql"  "${conn_username}"  "${mysql_data_path}/var/${mysql_port}.socket"  "${conn_userpwd}"  "60"
 
+
+echo "install backup software "
+[ -e "${backup_software_gzpath}" ] && tar -xzpvf ${backup_software_gzpath} > /dev/null
+[ -d "${backup_software_gzpath%%.*}" ] && rpm -ivUh "${backup_software_gzpath%%.*}/*"
 
 if [ ${running_mode} == ${running_mode_master_slave} ] ; then
 #configure replication check
@@ -1240,6 +1267,12 @@ config_mysql_service
 check_mysql_until_timeout  "${mysql_software_prefix}/${mysql_software_version}/bin/mysql"  "${conn_username}"  "${mysql_data_path}/var/${mysql_port}.socket"  "${conn_userpwd}"  "60"
 waittimeout_until_has_slave_host "60"  "${mysql_software_prefix}/${mysql_software_version}/bin/mysql" "${mysql_port}"
 config_keepalived_service
+
+echo "install backup software "
+cd /tmp
+[ -e "${backup_software_gzpath}" ] && tar -xzpvf ${backup_software_gzpath} > /dev/null
+[ -d "${backup_software_gzpath%%.*}" ] && rpm -ivUh "${backup_software_gzpath%%.*}/*"
+
 exit 0 ;
 foe
 mv ${cpwd}/execute_for_slave.sh  ${tmp_dir}/for_slave/

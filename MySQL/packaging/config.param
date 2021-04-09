@@ -11,3 +11,4 @@ application_username=root
 application_userpasswd=zxm10
 conn_username=root
 conn_userpwd=zxm10
+mysql_gz_software=/usr/local/mysql/mysql-8.0.22-el7-x86_64.tar.gz

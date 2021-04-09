@@ -1,0 +1,64 @@
+---
+- hosts: mysql1
+  vars:
+    project_name: DCVS-ES
+    project_url: git@10.45.156.100:DCVS/DCVS-ES.git
+    flag_dirctory: /success
+    base_dir: /root/codelibrary/essync
+  remote_user: root
+  tasks:
+    - name: remove directory if exists
+      file:
+        path: "{{ base_dir }}/{{  project_name }}"
+        state: absent
+      notify:
+        - prepare flag directory
+        - remove exists files
+    - name: download git project codes
+      command: git clone -b master "{{ project_url }}"  "{{ base_dir }}/{{ project_name }}"
+    - name: prepare package script
+      copy:
+        src: "{{ base_dir }}/{{ project_name }}/tools/sync_script/package.sh"
+        dest: "{{ base_dir }}/package.sh"
+        force: yes
+        backup: yes
+    - name: copy predefine.sh script
+      copy:
+        src: "{{ base_dir }}/{{ project_name }}/tools/predefine.sh"
+        dest: "{{ base_dir }}/predefine.sh"
+        force: yes
+        backup: yes
+    - name: copy set_param.sh script
+      copy:
+        src: "{{ base_dir }}/{{ project_name }}/tools/sync_script/set_param.sh"
+        dest: "{{ base_dir }}/set_param.sh"
+        force: yes
+        backup: yes
+    - name: copy msort.sh script
+      copy:
+        src: "{{ base_dir }}/{{ project_name }}/tools/msort.sh"
+        dest: "{{ base_dir }}/msort.sh"
+        force: yes
+        backup: yes
+    - name: grant execute privilege
+      command: chmod u+x "{{ base_dir }}/package.sh"
+    - name: make a release package
+      shell: "{{ base_dir }}/package.sh"
+      notify:
+        - prepare flag directory
+        - confirm success
+  handlers:
+    - name: confirm success
+      file:
+        path: /success/s
+        state: touch
+    - name: make flag
+      file:
+        path: /success/r
+        state: touch
+      listen: remove exists files
+    - name: prepare flag directory
+      file:
+        path: /success
+        state: directory
+

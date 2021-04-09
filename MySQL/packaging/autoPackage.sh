@@ -35,7 +35,6 @@ exec_sql(){
 local sql="$1"
 local mysql="$2"
 local socket_file="$3"
-local sqllog="${cpwd}/exec-sql-log-${cur_time}.log"
 local has_semicolon=$(echo "${sql}"|tail -1| sed -e 's/[ ]*$//g')
 [  "${has_semicolon: -1}"X != ";X" ] && sql="${sql};"
 cat >> "${sqllog}" <<EOF
@@ -54,7 +53,7 @@ check_mysql_alive(){
 local mysql="$1"
 local socket="$2"
 local flag=1
-flag=`${mysql} -u${conn_username} -p${conn_userpwd}  --socket=${socket} -e " select 1 flag;"|grep -v flag `
+flag=`${mysql} -u${conn_username} -p${conn_userpwd}  --socket=${socket} -e " select 1 flag;"  2>/dev/null |grep -v flag `
 flag=${flag:-0}
 if [  "$flag" -a $flag -eq  1 ];then
         echo 0
@@ -69,7 +68,7 @@ local socket=$2
 local port=$3
 local timeout=30
 if [ ${isServiceFlag} ] ; then 
-   systemctl start mysql_${port}
+   systemctl start mysql_${port}  2>/dev/null
    common_waittimeout "${timeout}" "check_mysql_alive"  "${mysql}"  "${socket}"
 fi
 }
@@ -130,9 +129,9 @@ return 1
 is_service(){
 local port=$1
 local isServiceFlag=`ps -ef|grep ${port}|grep mysqld_safe|sed -e 's: \{1,\}: :g' -e 's:^ ::g'|cut -d ' ' -f 3`
-[ ${isServiceFlag} -ne 1  ] && return 1
+[ ${isServiceFlag:-0} -ne 1  ] && return 1
 [ ! ${isServiceFlag}  ] && isServiceFlag=`systemctl list-units mysql_${port}|wc -l `
-[ ${isServiceFlag} -eq 1 ] && return 0
+[ ${isServiceFlag:-0} -eq 1 ] && return 0
 return 1
 }
 
@@ -158,18 +157,46 @@ shutdown;
 check_mysql_down_untiltimeout  "${port}" "${timeout}"
 }
 
+check_log_error(){
+#1 logfile
+[ `grep -E 'ERROR [0-9]+ \([0-9a-zA-Z]+\) at line' $1|wc -l ` -gt 0 ] && return 1
+return 0
+}
 
+compare(){
+local v1=$1
+local v2=$2
+if [[ "$v1" =~ ^rhbb_ ]]; then
+v1=`echo ${v1}|cut -c 6-`
+fi
+if [[ "$v2" =~ ^rhbb_ ]]; then
+v2=`echo ${v2}|cut -c 6-`
+fi
+if (( "$v1 < $v2" )) ;then
+echo -1
+elif (( "$v1 > $v2" )) ;then
+echo 1
+else
+echo 0
+fi
+}
+
+
+s_pv1=$1
+s_pv2=$2
 
 find -name "*.log" | xargs rm -f
 cur_time=`date +%Y-%m-%d-%H-%M-%S`
 package_date=`date +%Y%m%d%H%M%S`
 cpwd=$(cd `dirname $0`;pwd)
+sqllog="${cpwd}/exec-sql-log-${cur_time}.log"
 cd ${cpwd}
 {
 project_git_name="DCVS-DB"
 project_git_url="git@10.45.156.100:DCVS/DCVS-DB.git"
 pname_conn_username="conn_username"
 pname_conn_userpwd="conn_userpwd"
+pname_backup_software_gzpath="backup_software_gzpath"
 script_dir=$(cd `dirname $0`; pwd)
 package_version_file="${script_dir}/package.version.lst"
 package_config_file="${script_dir}/package.config.param"
@@ -187,9 +214,10 @@ mysql_data_base=`get_param_value ${p_mysql_data_base} ${package_version_file}`
 mysql_data_base="${mysql_data_base:-${default_mysql_data_base}}"
 code_library=`get_param_value ${p_code_library} ${package_version_file}`
 code_library="${code_library:-${default_code_library}}"
-znvdata_version="${znvdata_version%_*}""_""${cur_time}"
+znvdata_version="${znvdata_version%_*}""_""${package_date}"
 conn_username=`get_param_value ${pname_conn_username} ${package_config_file}`
 conn_userpwd=`get_param_value ${pname_conn_userpwd} ${package_config_file}`
+backup_software_gzpath=`get_param_value ${pname_backup_software_gzpath} ${package_config_file}`
 [ ! -f ${mysql_software_package}  ] && echo "mysql software package not exists . program exits ." && exit 1 
 mysql_software_version=${mysql_software_package##*/}
 mysql_software_version=${mysql_software_version%.tar.gz}
@@ -278,16 +306,21 @@ fi
 
 
 for (( i=0 ; i<${compare_versuib_num} ; i++ )) {
-if (( "${versions[i]} < ${last_versions[i]}" )) ;then 
+com_flag=`compare ${versions[i]} ${last_versions[i]}`
+if [ $com_flag -lt 0 ] ;then 
 files[${current_seq}]=${files[${last_seq}]}
 files[${last_seq}]=${file_name}
 switch_flag=1
 break;
-elif (( "${versions[i]} > ${last_versions[i]}" )) ;then 
+elif [ $com_flag -gt 0 ] ;then 
 version_flag=1
 break;
 fi;
 }
+
+if (( "${versuib_num} > ${last_versuib_num}" )) ; then 
+	version_flag=1
+fi;
 
 [ ${switch_flag} -eq 1 ] && continue
 [ ${version_flag} -eq 1 ] && break
@@ -310,6 +343,10 @@ switch_flag=1;
 continue;
 fi;
 
+if [ ${type_num} -gt ${last_type_num} ] ;then 
+    break;
+fi;
+
 
 #echo ${sort_n}
 #echo ${last_sort_n}
@@ -329,25 +366,67 @@ for(( i=0;i<${#files[@]};i++))
 do
 exec_sql "source ${files[i]}"  "${mysql}"  "${socket_file}"
 done;
+
+#打包的时候，将git提交信息写入
+pv0=
+pv1=
+pv2=
+G_MODE_VALUE='VALUE'
+G_MODE_GET='GET'
+if [  "${s_pv1}X" == "X" ] || [ "${s_pv2}X" == "X" ] ; then
+	pv0="${G_MODE_GET}"
+    pv1="${code_library}/${project_git_name}"
+else
+	pv0="${G_MODE_VALUE}"
+	pv1="${git_hash}|${git_time}"
+fi
+pv2="PUSH_GIT.SQL"
+sh ${cpwd}/push_git.sh  "${pv0}"  "${pv1}" "${pv2}"
+[ $? -eq 0 -a  -r "${pv2}"  -a  -s "${pv2}" ]  && exec_sql "source ${pv2}"  "${mysql}"  "${socket_file}"
+
+
 exec_sql "set global  innodb_fast_shutdown=0"   "${mysql}"  "${socket_file}"
 shutdown_mysql "${mysql}" "${socket_file}"  "${mysql_port}"
+
+check_log_error ${sqllog}
+[ $? -ne 0 ]  && echo "Some errors has happend during packaing, abort." && exit 1
+
 cd "${code_library}"
 [ `pwd` == ${code_library} ] && rm -fr ${znvdata_version}
 
 mkdir -p ${znvdata_version}
 cp -a "${mysql_data_base}/data" ${znvdata_version} > /dev/null 2>&1
 cp -a "${mysql_data_base}/log" ${znvdata_version} > /dev/null 2>&1
+cat /dev/null > "${znvdata_version}/log/log.err"  > /dev/null 2>&1
+cat /dev/null > "${znvdata_version}/log/slow.log"  > /dev/null 2>&1
 cp -a "${mysql_data_base}/my.cnf" ${znvdata_version} > /dev/null 2>&1
 cp -a "${mysql_data_base}/scripts" ${znvdata_version} > /dev/null 2>&1
 cp -a "${mysql_data_base}/var" ${znvdata_version} > /dev/null 2>&1
 chown -R mysql:mysql ${znvdata_version} > /dev/null 2>&1
-tar -czpvf "${znvdata_version}.tar.gz" ${znvdata_version} > /dev/null 2>&1
+tar -czpvf "${znvdata_version}.tar.gz" ${znvdata_version}  --remove-files > /dev/null 2>&1
 echo "${p_mysql_software_version}=${mysql_software_version}" > version.lst
 echo "${p_znvdata_version}=${znvdata_version}" >> version.lst
 echo "${p_znv_tools_template}=${znv_tools_template}" >> version.lst
 
-cp ${package_config_file} config.param
-cp "${code_library}/${project_git_name}/packaging/config.deploy" config.deploy
+[ -e ${backup_software_gzpath} ] && cp ${backup_software_gzpath} ./
+#cp ${package_config_file} config.param
+cat > config.param <<EOF
+mysql_port=
+mysql_data_base=/database/mysql
+slave_hostip=
+master_hostip=
+backup_base=/database/mysql
+vip=
+running_mode=SINGLE
+project_name=znv-dcvs
+mysql_software_prefix=
+application_username=${conn_username}
+application_userpasswd=${conn_userpwd}
+conn_username=${conn_username}
+conn_userpwd=${conn_userpwd}
+backup_software_gzpath=${backup_software_gzpath##*/}
+EOF
+#cp "${code_library}/${project_git_name}/packaging/config.deploy" config.deploy
 cp "${code_library}/${project_git_name}/packaging/prepare.sh" prepare.sh
 cp "${code_library}/${project_git_name}/packaging/prepareForCI.sh" prepareForCI.sh
 cp "${code_library}/${project_git_name}/packaging/deployop.sh" deployop.sh
@@ -360,17 +439,15 @@ cp "${code_library}/${project_git_name}/packaging/predefine.sh" predefine.sh
 cp "${code_library}/${project_git_name}/packaging/param_for_deploy_platform.xlsx"  param_for_deploy_platform.xlsx
 cp "${mysql_software_package}" "./"
 cp -a "${code_library}/${project_git_name}/packaging/${znv_tools_template}"  "./" > /dev/null 2>&1
-tar -czpvf "${znv_tools_template}.tar.gz" "${znv_tools_template}" > /dev/null 2>&1
+tar -czpvf "${znv_tools_template}.tar.gz" "${znv_tools_template}" --remove-files > /dev/null 2>&1
 tar -czpvf "DCVSDBMYSQL_${package_date}_MYSQL_DCVS.tar.gz"  prepare.sh  \
 prepareForCI.sh deployop.sh version.lst config.param config.deploy "${znv_tools_template}.tar.gz" "${znvdata_version}.tar.gz"  \
  "${mysql_software_version}.tar.gz"  install.sh  start.sh  stop.sh check.sh  uninstall.sh predefine.sh \
- param_for_deploy_platform.xlsx
-rm -f version.lst config.param prepare.sh "${znv_tools_template}.tar.gz" \
- "${znvdata_version}.tar.gz"  "${mysql_software_version}.tar.gz"  \
- install.sh  start.sh  check.sh  uninstall.sh predefine.sh \
- param_for_deploy_platform.xlsx prepareForCI.sh  deployop.sh stop.sh
-rm -fr "${znvdata_version}"   "${znv_tools_template}"
+ param_for_deploy_platform.xlsx  ${backup_software_gzpath##*/} --remove-files
 
 start_mysql "${mysqld_safe}" \
 "${mysql_data_base}/my.cnf"  "${mysql}"  "${socket_file}" "${mysql_port}"
+
 }>${cur_time}.log
+
+exit 0 

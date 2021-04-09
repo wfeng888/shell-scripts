@@ -11,3 +11,4 @@ application_username=root
 application_userpasswd=zxm10
 conn_username=root
 conn_userpwd=zxm10
+backup_software_gzpath=/usr/local/percona-xtrabackup-24.tar.gz

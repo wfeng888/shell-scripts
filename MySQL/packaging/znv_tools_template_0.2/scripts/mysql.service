@@ -35,7 +35,7 @@ ExecStop=${SUB_PREFIX_DATA_PATH}/znvtools/scripts/mysql.server.fake stop
 # Sets open_files_limit
 LimitNOFILE = 10000
 
-Restart=on-failure
+#Restart=on-failure
 
 #RestartPreventExitStatus=1
 

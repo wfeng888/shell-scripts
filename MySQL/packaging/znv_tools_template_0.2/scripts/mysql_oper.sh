@@ -1,11 +1,13 @@
 #! /bin/bash
+cur_dir=$(cd `dirname $0`;pwd) 
+source ${cur_dir}/set_param.sh
 oper=$1
 login_path=$2
-mysqld_safe=${SUB_MYSQL_BASE}/bin/mysqld_safe
-db_dir=${SUB_PREFIX_DATA_PATH}
-mysql=${SUB_MYSQL_BASE}/bin/mysql
+#mysqld_safe=${SUB_MYSQL_BASE}/bin/mysqld_safe
+#db_dir=${SUB_PREFIX_DATA_PATH}
+#mysql=${SUB_MYSQL_BASE}/bin/mysql
 socketf=
-ops_username="autoOPS"
+#ops_username="autoOPS"
 case "$oper" in 
    start)
        ${mysqld_safe} --defaults-file=${db_dir}/my.cnf &

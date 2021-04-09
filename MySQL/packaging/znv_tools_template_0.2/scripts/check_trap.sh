@@ -1,11 +1,12 @@
 #! /bin/bash
-cpwd=$(cd `dirname $0`; pwd)
-basedir=${cpwd}/..
-mysql=${SUB_MYSQL_BASE}/bin/mysql
+cur_dir=$(cd `dirname $0`;pwd)
+source ${cur_dir}/set_param.sh 
+basedir=${cur_dir}/..
+#mysql=${SUB_MYSQL_BASE}/bin/mysql
 haIgnore=${basedir}/config/ha.ignore
 port=$1
-db_dir=${SUB_PREFIX_DATA_PATH}
-ops_username="autoOPS"
+#db_dir=${SUB_PREFIX_DATA_PATH}
+#ops_username="autoOPS"
 stopping(){
 PROLOGUE=$(echo "$(date +"%a %b %e %X %Y")": \[$PPID:$$\])
 echo "$PROLOGUE" STOPPING

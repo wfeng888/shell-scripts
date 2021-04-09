@@ -1,9 +1,11 @@
 #! /bin/bash
+
+cur_dir=$(cd `dirname $0`;pwd)
+source ${cur_dir}/set_param.sh 
 port=$1
-cpwd=$(cd `dirname $0`; pwd)
-basedir=${cpwd}/..
-mysql=${SUB_MYSQL_BASE}/bin/mysql
-db_dir=${SUB_PREFIX_DATA_PATH}
+basedir=${cur_dir}/..
+#mysql=${SUB_MYSQL_BASE}/bin/mysql
+#db_dir=${SUB_PREFIX_DATA_PATH}
 haIgnore=${basedir}/config/ha.ignore
 if [ -f ${haIgnore} ]; then
    exit 0
