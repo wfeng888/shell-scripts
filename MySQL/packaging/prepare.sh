@@ -468,15 +468,16 @@ backup_software_gzpath=`get_param_value ${pname_backup_software_gzpath} ${config
 running_mode_master_slave="MASTER_SLAVE"
 running_mode_single="SINGLE"
 use_pwd=
-keepalived_master="MASTER"
+keepalived_master="BACKUP"
 keepalived_backup="BACKUP"
-keepalived_master_priority=100
+keepalived_master_priority=90
 keepalived_backup_priority=90
 tmp_dir=${cpwd}/${cur_time}
 master_server_id=1
 slave_server_id=2
 master_read_only=OFF
 slave_read_only=ON
+#[  ${running_mode} == ${running_mode_single} ] &&  master_read_only='OFF'
 master_event_scheduler=1
 slave_event_scheduler=0
 skip_mysql_software=
@@ -683,7 +684,6 @@ chown -R root:root "${mysql_data_path}/znvtools/config"
 chmod -R 755 "${mysql_data_path}/znvtools/scripts"
 
 
-
 cat my.cnf.template |sed -e 's:${SUB_PORT}:'${mysql_port}':g' -e 's:${SUB_MYSQL_BASE}:'${mysql_software_prefix}/${mysql_software_version}':g' -e 's:${SUB_PREFIX_DATA_PATH}:'${mysql_data_path}':g' -e 's:${SUB_SERVER_ID}:'${master_server_id}':g' -e 's:${SUB_READ_ONLY}:'${master_read_only}':g'   -e 's:${SUB_EVENT_SCHEDULER}:'${master_event_scheduler}':g' >  ${mysql_data_path}/my.cnf
 
 
@@ -802,6 +802,8 @@ change master to master_host="${slave_hostip}", master_port=${mysql_port} ,maste
 start slave;
 eof
 sleep 2
+
+sed -r -i -e "s%"'^\s*(read_only)\s*=\s*(([oO][fF]{2})|0)\s*$'"%\1=ON%" -e "s%"'^\s*(super_read_only)\s*=\s*(([oO][fF]{2})|0)\s*$'"%\1=ON%"  "${mysql_data_path}/my.cnf"
 
 echo "configu keepalived service"
 config_keepalived_service

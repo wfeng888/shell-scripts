@@ -1,5 +1,6 @@
 #! /bin/bash
-cpwd=$(cd `dirname $0`; pwd)
+cur_dir=$(cd `dirname $0`; pwd)
+source ${cur_dir}/set_param.sh
 roleswitchto=$2
 to_master='TO_MASTER'
 to_backup='TO_BACKUP'
@@ -111,7 +112,7 @@ if [ ${sec_behind:--1} -eq -1 ] && [ `is_slave` ] && [ "$roleswitchto" = "$to_ma
 echo "${slave_not_running}" ;
 
 echo "wait some time "
-#${cpwd}/send_mail.sh "critical error!" "$switch_fail_flag" "${port}"  "${slave_not_running}" ;
+#${cur_dir}/send_mail.sh "critical error!" "$switch_fail_flag" "${port}"  "${slave_not_running}" ;
 
 #exit 1; 
 }
@@ -126,4 +127,4 @@ done
 do_switch;
 
 
-} >> ${cpwd}/../log/run.log  2>&1
+} >> ${cur_dir}/../log/run.log  2>&1
