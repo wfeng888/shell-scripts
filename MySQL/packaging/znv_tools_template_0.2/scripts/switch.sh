@@ -9,8 +9,9 @@ port=$1
 #mysql=${SUB_MYSQL_BASE}/bin/mysql
 #db_dir=${SUB_PREFIX_DATA_PATH}
 sec_behind=
-timeout=600
-waittime=0
+declare -i timeout=600
+declare -i timeout_forever=31104000
+declare -i waittime=0
 master_flag='OFF'
 slave_flag='ON'
 sleeptime=10
@@ -21,7 +22,7 @@ stragety_until=1
 #strategy 
 #0:loop until slave and master has consistence data. 
 #1:loop  before slave and master become consistence  until timeout
-strategy=$stragety_until
+strategy=$strategy_forever
 readonly   sleeptime master_flag slave_flag
 
 do_switch_to_master(){
@@ -80,7 +81,7 @@ local Relay_Master_Log_File=`$mysql --login-path=${port}  -u${ops_username}  -e 
 local Exec_Master_Log_Pos=`$mysql --login-path=${port}  -u${ops_username}  -e "show  slave status \G " |grep -i -E '^[ ]*Exec_Master_Log_Pos:'|cut -d ":" -f 2 `
 local l_sql_running=`is_sql_running`
 [ ${Master_Log_File}x =  ${Relay_Master_Log_File}x ]  && [ ${Read_Master_Log_Pos}x =  ${Exec_Master_Log_Pos}x ] && [ ${l_sql_running} ] && echo 0 && return
-[ ! ${l_sql_running} ] && echo -1 && return
+[ ! ${l_sql_running} ] && echo 3 && return
 [ ${Master_Log_File}x =  ${Relay_Master_Log_File}x ]  && [ ${l_sql_running} ] && echo 1 && return 
 [ ${Master_Log_File}x !=  ${Relay_Master_Log_File}x ]  && [ ${l_sql_running} ] && echo 2 && return 
 }
@@ -100,7 +101,7 @@ trap "stopping; exit 0;"  HUP INT QUIT USR1 USR2 PIPE ALRM
 
 [ "$roleswitchto" = "$to_backup" ]  || ( [ `is_master` ] && [ "$roleswitchto" = "$to_master" ] ) && do_switch && exit 0;
 
-[ $strategy -eq $strategy_forever ] && timeout=99999
+[ $strategy -eq $strategy_forever ] && timeout=$timeout_forever
 ischange=`check_role ${master_flag}`
 while (( "${waittime} < ${timeout}" ))
 do

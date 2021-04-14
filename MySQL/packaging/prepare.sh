@@ -803,7 +803,7 @@ start slave;
 eof
 sleep 2
 
-sed -r -i -e "s%"'^\s*(read_only)\s*=\s*(([oO][fF]{2})|0)\s*$'"%\1=ON%" -e "s%"'^\s*(super_read_only)\s*=\s*(([oO][fF]{2})|0)\s*$'"%\1=ON%"  "${mysql_data_path}/my.cnf"
+sed -r -i -e "s%"'^\s*(read_only)\s*=\s*(([oO][fF]{2})|0)\s*$'"%\1=ON%" -e "s%"'^\s*(super_read_only)\s*=\s*(([oO][fF]{2})|0)\s*$'"%\1=ON%"  -e "s%"'^\s*(event_scheduler)\s*=\s*(([oO][nN])|1)\s*$'"%\1=OFF%" "${mysql_data_path}/my.cnf"
 
 echo "configu keepalived service"
 config_keepalived_service
