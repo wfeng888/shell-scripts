@@ -3,7 +3,7 @@
 cur_dir=$(cd `dirname $0`;pwd)
 source ${cur_dir}/set_param.sh 
 port=$1
-
+mtime=`date "+%Y-%m-%d_%H:%M:%S"`
 if [  "${db_dir}X" == "X"  -o "${mysql}X" == "X"  -o "${ops_username}X" == "X" -o "${port}X" == "X" ] ; then 
 	${cur_dir}/send_mail.sh "warning" "SEND_MSG"  "${port}" "Automatic backup failed,Manual intervention is needed! "
 	exit 1
@@ -86,12 +86,14 @@ $xtrabackup --defaults-file=$my_config --login-path=${port} -u${ops_username} --
 }
 
 remove_expire_backup(){
-if [  -d  "${backup_base_dir}" -a "${backup_base_dir}" =~ backup ] ; then 
+if [  -d  "${backup_base_dir}" ]  && [[ "${backup_base_dir}" =~ backup ]] ; then 
 	v_pwd=`pwd`
 	cd "${backup_base_dir}"
 	find . -maxdepth 1 -mtime +${expire_days} -regex './[0-9]*-[0-9]*-[0-9]*'  -execdir rm -fr {} \;
 	cd "${v_pwd}"
+fi
 }
+
 
 query_without_response(){
 #1  statement
@@ -126,7 +128,7 @@ remove_expire_backup
 if [ ! `can_backup` ] ; then
 	echo " we won't backup  on this instance." 
 else
-	[  -d  "${backup_base_dir}/${cur_day}" ] && mv "${backup_base_dir}/${cur_day}"  "${backup_base_dir}/${cur_day}.bak"
+	[  -d  "${backup_base_dir}/${cur_day}" ] && mv "${backup_base_dir}/${cur_day}"  "${backup_base_dir}/${cur_day}.bak.${mtime}"
 	mkdir -p "${backup_base_dir}/${cur_day}"
 	echo " backup start  `date '+%Y-%m-%d %H:%M:%S'` " > "${backup_base_dir}/${cur_day}/record.log"
 		if [ `is_sunday` ] ; then
