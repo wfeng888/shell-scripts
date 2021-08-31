@@ -1,0 +1,3 @@
+git_project_path=DCVS-DB
+list_file=batch.lst
+mysql_gz_software=/usr/local/mysql/mysql-8.0.22-el7-x86_64.tar.gz

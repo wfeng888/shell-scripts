@@ -1,14 +1,2 @@
-mysql_port=3306
-mysql_data_base=/database/dcvs_data
-slave_hostip=10.45.156.220
-master_hostip=10.45.156.210
-backup_base=/database/dcvs_data
-vip=10.72.77.251
-running_mode=SINGLE
-project_name=dcvs
-mysql_software_prefix=
-application_username=root
-application_userpasswd=zxm10
-conn_username=root
-conn_userpwd=zxm10
-mysql_gz_software=/usr/local/mysql/mysql-8.0.22-el7-x86_64.tar.gz
+mysql_software_package_path=/usr/local/mysql/mysql-5.7.34-el7-x86_64.tar.gz
+backup_software_gzpath=/usr/local/percona-xtrabackup-24.tar.gz

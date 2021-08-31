@@ -11,14 +11,17 @@ template=
 if [ ${is_template} ] ; then 
 	template='_template/'		
 fi
-if [ ${delete_flag} == 'DELETE' ] ; then
+if [ "${delete_flag}X" == 'DELETEX' ] ; then
     echo "delete ${http_host}:${http_port}/${template}${index_name}"
     curl -X DELETE "${http_host}:${http_port}/${template}${index_name}?pretty"
 else
     echo "deploy ${http_host}:${http_port}/${template}${index_name}"
+    [ "${log_file}X" != "X" ] && echo "deploy ${http_host}:${http_port}/${template}${index_name}" >> ${log_file}
+    index_name=`echo $index_name|tr @ /`
     ret=`curl -X $oper_type "${http_host}:${http_port}/${template}${index_name}?pretty" -H 'Content-Type: application/json' -d@${filepath}`
     echo $ret
-    [ `echo $ret|grep -w 'error'|grep -w 'root_cause'|grep -w 'status'|wc -l` -gt 0 ] && exit 1
+    [ "${log_file}X" != "X" ] && echo $ret >> ${log_file}
+    [ `echo $ret|grep  '"acknowledged" : true'|wc -l` -eq 0 ] && exit 1
 fi
 exit 0
 

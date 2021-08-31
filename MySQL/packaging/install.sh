@@ -71,6 +71,7 @@ replace_infile "${cpwd}/uninstall.sh"
 cp -a ${tmp_dir}/znvtools "${mysql_data_path}/"
 
 chown -R ${os_user_mysql}:${os_user_mysql_group} "${mysql_data_path}"
+echo ${mysql_data_path%/}|awk -F '/' 'BEGIN{dirn="/"} {for(i=2;i<=NF;i++){dirn=(dirn""$i);print dirn;dirn=(dirn"/")} } '|xargs chmod o+x
 chown -R root:root "${mysql_data_path}/znvtools/scripts"
 chown -R root:root "${mysql_data_path}/znvtools/config"
 chmod -R 755 "${mysql_data_path}/znvtools/scripts"

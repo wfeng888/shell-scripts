@@ -1,0 +1,12 @@
+all:
+  children:
+    host_group1:
+      hosts:
+        mysql1:
+          ansible_host: 10.45.156.201
+        mysql2:
+          ansible_host: 10.45.156.202
+        mysql-master:
+          ansible_host: 10.45.156.210
+        mysql3:
+          ansible_host: 10.45.156.220

@@ -99,6 +99,10 @@ break;
 fi;
 }
 
+if (( "${versuib_num} > ${last_versuib_num}" )) ; then 
+	version_flag=1
+fi;
+
 [ ${switch_flag} -eq 1 ] && continue
 [ ${version_flag} -eq 1 ] && break
 
@@ -128,6 +132,9 @@ switch_flag=1;
 continue;
 fi;
 
+if [ ${type_num} -gt ${last_type_num} ] ;then 
+    break;
+fi;
 
 #echo ${sort_n}
 #echo ${last_sort_n}

@@ -14,10 +14,15 @@ mkdir -p "${work_dir}" && cd "${work_dir}"
 
  
 tmp_list_file="${work_dir}/tmp_list.${cur_time}"
+tmp_list_file1="${work_dir}/tmp_list1.${cur_time}"
 
-[ `file_is_empty "${list_file}" ` -eq 0 ] && find ${git_project_path} -ipath ${git_project_path}/[0-9]*.JSON > "${list_file}"
+if [ `file_is_empty "${list_file}" ` -eq 0 ] ; then 
+    find ${git_project_path} -ipath ${git_project_path}/[0-9]*.JSON > "${tmp_list_file1}"
+else
+    cat "${list_file}" > "${tmp_list_file1}"
+fi;
 # 这里将所有文件路径全部转为绝对路径存储，避免有些操作系统不识别"path/../../path"这种相对路径
-cat ${list_file}|awk -v dir="${cur_dir}" 'BEGIN {result=""} {if ($1 !~ "^/") { result=dir"/"$1}  else { result=$1 } {  system("cd `dirname "result" `;pwd|xargs -I{} echo {}/`basename "result"`") }}' | xargs -I{} find -L {}  -iname *.JSON > ${tmp_list_file}
+cat ${tmp_list_file1}|awk -v dir="${cur_dir}" 'BEGIN {result=""} {if ($1 !~ "^/") { result=dir"/"$1}  else { result=$1 } {  system("cd `dirname "result" `;pwd|xargs -I{} echo {}/`basename "result"`") }}' | xargs -I{} find -L {}  -iname *.JSON > ${tmp_list_file}
 
 mkdir "${will_scripts_dir}"
 xargs -a ${tmp_list_file} -I% sh -c "dirname %|cut -c 2- | xargs -I{} mkdir -p scripts/{}; cp %  ${will_scripts_dir}%"
@@ -32,6 +37,7 @@ echo "${pname_sync_es_http_ip}=" > config.param
 echo "${pname_sync_es_http_port}=" >> config.param
 echo "${pname_cluster_name}=" >> config.param
 echo "${pname_list_file}=${scripts_list}" >> config.param
+echo "${pname_ignore_error}=N" >> config.param
 cp ${git_project_path}/tools/sync_script/install.sh  install.sh
 cp ${git_project_path}/tools/sync_script/uninstall.sh  uninstall.sh
 cp ${git_project_path}/tools/sync_script/check.sh  check.sh

@@ -52,8 +52,13 @@ select 'end' ,sysdate() from dual;
 check_mysql_alive(){
 local mysql="$1"
 local socket="$2"
+local init_flag="$3"
 local flag=1
-flag=`${mysql} -u${conn_username} -p${conn_userpwd}  --socket=${socket} -e " select 1 flag;"  2>/dev/null |grep -v flag `
+if [ "${init_flag}X" == "1X" ]; then
+  flag=`${mysql} -uroot --socket=${socket} -e " select 1 flag;"  2>/dev/null |grep -v flag `
+else
+  flag=`${mysql} -u${conn_username} -p${conn_userpwd}  --socket=${socket} -e " select 1 flag;"  2>/dev/null |grep -v flag `
+fi
 flag=${flag:-0}
 if [  "$flag" -a $flag -eq  1 ];then
         echo 0
@@ -87,6 +92,16 @@ ${mysqld_safe} --defaults-file=${mysql_cnf} &
 common_waittimeout "${timeout}" "check_mysql_alive"  "${mysql}"  "${socket}"
 }
 
+init_start_mysql(){
+local mysqld_safe=$1
+local mysql_cnf=$2 
+local mysql=$3
+local socket=$4
+local timeout=60
+[ `check_mysql_alive  "${mysql}"  "${socket}"  "1"` -eq 0 ] && return 0
+${mysqld_safe} --defaults-file=${mysql_cnf} &
+common_waittimeout "${timeout}" "check_mysql_alive"  "${mysql}"  "${socket}" "1"
+}
 
 common_waittimeout(){
 #1 timeout
@@ -97,7 +112,7 @@ shift
 while (( "${waittime} < ${timeout}" ))
 do
 echo "check loop count:$[waittime/5]"
-[ `$@` -eq 0 ] && return 0 
+[ "`$@`X" == "0X" ] && return 0 
 sleep 5
 let "waittime+=5"
 done
@@ -182,6 +197,37 @@ fi
 }
 
 
+update_config_file(){
+#1 config_name
+#2 config_value
+#3 config_file
+if [ `grep -E '^\s*'"${1}"'\s*=\s*\S*' $3|wc -l` -gt 0 ]; then 
+  sed -r -i 's&(^\s*'"${1}"'\s*)=\s*\S*&\1='"${2}"'&' $3
+else
+  echo "$1=$2" >> $3
+fi
+}
+
+remove_config(){
+#1 config_name
+#2 config_file
+if [ `grep -E '^\s*'"${1}"'\s*=\s*\S*' $2|wc -l` -gt 0 ]; then 
+    sed -r -i 's&(^\s*'"${1}"'\s*)=&\#\1=&' $2
+fi
+}
+
+check_port_busy(){
+#1 port
+if [ ${os_user_root} != ${cur_user} ]; then 
+  flag=` sudo netstat -apn | grep -w ${1} | grep -w LISTEN | wc -l `
+else
+  flag=`netstat -apn | grep -w ${1} | grep -w LISTEN | wc -l`
+fi
+[ "${flag}X" == "X" ]  && flag=0
+[ ${flag} -gt 0 ] && return 1
+return 0
+}
+
 s_pv1=$1
 s_pv2=$2
 
@@ -189,17 +235,19 @@ find -name "*.log" | xargs rm -f
 cur_time=`date +%Y-%m-%d-%H-%M-%S`
 package_date=`date +%Y%m%d%H%M%S`
 cpwd=$(cd `dirname $0`;pwd)
-sqllog="${cpwd}/exec-sql-log-${cur_time}.log"
-cd ${cpwd}
+work_dir="${cpwd}/${package_date}"
+mkdir -p "${work_dir}"
+sqllog="${work_dir}/exec-sql-log-${cur_time}.log"
+#cd ${cpwd}
 {
+default_conn_username='root'
+default_conn_userpwd='zxm10'
 project_git_name="DCVS-DB"
 project_git_url="git@10.45.156.100:DCVS/DCVS-DB.git"
 pname_conn_username="conn_username"
 pname_conn_userpwd="conn_userpwd"
 pname_backup_software_gzpath="backup_software_gzpath"
-script_dir=$(cd `dirname $0`; pwd)
-#package_version_file="${script_dir}/package.version.lst"
-package_config_file="${script_dir}/package.config"
+package_config_file="${cpwd}/config.param"
 p_mysql_software_version="mysql_software_version"
 p_znv_tools_template="znv_tools_template"
 p_mysql_software_package_path="mysql_software_package_path"
@@ -207,16 +255,13 @@ p_znvdata_version="znvdata_version"
 p_mysql_data_base="mysql_data_base"
 p_code_library="code_library"
 default_code_library="${cpwd}"
-default_mysql_data_base="/database/my3000"
+#default_mysql_data_base="/database/my3000"
 mysql_software_package=`get_param_value ${p_mysql_software_package_path} ${package_config_file}`
-znvdata_version=`get_param_value ${p_znvdata_version} ${package_config_file}`
-mysql_data_base=`get_param_value ${p_mysql_data_base} ${package_config_file}`
-mysql_data_base="${mysql_data_base:-${default_mysql_data_base}}"
-code_library=`get_param_value ${p_code_library} ${package_config_file}`
-code_library="${code_library:-${default_code_library}}"
-znvdata_version="${znvdata_version%_*}""_""${package_date}"
-conn_username=`get_param_value ${pname_conn_username} ${package_config_file}`
-conn_userpwd=`get_param_value ${pname_conn_userpwd} ${package_config_file}`
+#mysql_data_base=`get_param_value_with_default ${p_mysql_data_base} ${package_config_file}  ${default_mysql_data_base}`
+mysql_data_base=
+code_library=`get_param_value_with_default ${p_code_library} ${package_config_file}  ${default_code_library}`
+conn_username=`get_param_value_with_default ${pname_conn_username} ${package_config_file} "${default_conn_username}"`
+conn_userpwd=`get_param_value_with_default ${pname_conn_userpwd} ${package_config_file} "${default_conn_userpwd}"`
 backup_software_gzpath=`get_param_value ${pname_backup_software_gzpath} ${package_config_file}`
 [ ! -f ${mysql_software_package}  ] && echo "mysql software package not exists . program exits ." && exit 1 
 mysql_software_version=${mysql_software_package##*/}
@@ -224,11 +269,102 @@ mysql_software_version=${mysql_software_version%.tar.gz}
 old_pwd="`pwd`"
 
 
-mysql_base="`grep basedir ${mysql_data_base}/my.cnf|cut -d '=' -f 2`/bin"
+#构造初始化库的my.cnf配置文件
+tar -xzpvf ${mysql_software_package}  -C "${work_dir}/"
+mysql_dir_base="${work_dir}/${mysql_software_version}"
+mysql_base="${mysql_dir_base}/bin"
+mysql_port=3800
+busy_flag=1
+while [[ ${busy_flag} == 1 ]]
+do
+  check_port_busy ${mysql_port}
+  if [ $? -ne 0 ]; then 
+    let "mysql_port+=1"
+  else
+    busy_flag=0
+  fi
+done
+mysql_data_base="${work_dir}/my${mysql_port}"
 mysql="${mysql_base}/mysql"
+mysqld="${mysql_base}/mysqld"
 mysqld_safe="${mysql_base}/mysqld_safe"
-mysql_port=`grep port ${mysql_data_base}/my.cnf|cut -d'=' -f 2|head -1`
 socket_file="${mysql_data_base}/var/${mysql_port}.socket"
+mkdir -p  "${mysql_data_base}/data"  "${mysql_data_base}/var" "${mysql_data_base}/log"
+cat > "${mysql_data_base}/my.cnf" <<EOF
+[mysqld]
+port=${mysql_port}
+basedir=${mysql_dir_base}
+plugin-dir="${mysql_dir_base}/lib/plugin"
+lc-messages-dir=${mysql_dir_base}/share/english
+datadir="${mysql_data_base}/data"
+pid-file="${mysql_data_base}/var/${mysql_port}.pid"
+socket="${socket_file}"
+character-set-server            =utf8mb4
+server-id=1
+default-storage-engine=INNODB
+innodb_file_per_table=1
+innodb_log_buffer_size=16M
+innodb_buffer_pool_size=2048M
+innodb_log_files_in_group=2
+innodb_thread_concurrency=48
+innodb_flush_log_at_trx_commit=0
+sync_binlog=0
+thread_cache_size=8
+max_connections=200
+max_user_connections=150
+interactive_timeout=1800
+wait_timeout=300
+group_concat_max_len=102400
+event_scheduler=0
+log-bin-trust-function-creators=ON
+slow-query-log=ON
+slow_query_log_file=${mysql_data_base}/log/slow.log
+long_query_time=1
+log_slow_slave_statements=ON
+binlog_format=ROW
+expire_logs_days=8
+skip-log-bin
+log_error=${mysql_data_base}/log/log.err
+master_info_repository=TABLE
+relay_log_info_repository=TABLE
+innodb_log_file_size            =128M
+innodb_log_files_in_group       =2
+query_cache_size                =0
+tmp_table_size                  =8M
+myisam_max_sort_file_size       =1G
+myisam_sort_buffer_size         =0
+key_buffer_size                 =0
+read_buffer_size                =64K
+read_rnd_buffer_size            =256K
+sort_buffer_size                =512K
+bulk_insert_buffer_size         =64M
+max_allowed_packet              =64M
+sql_mode                        =TRADITIONAL
+innodb_page_cleaners            =8
+innodb_flush_method             =O_DIRECT
+innodb_page_size                =16K
+lower_case_table_names          =1
+transaction_isolation           =READ-COMMITTED
+EOF
+
+while read row_value
+do
+  p_name=$(echo `echo "${row_value}" |grep -o -E '^[[:blank:]]*my\_cnf\_[a-zA-Z_0-9-]+[[:blank:]]*=[[:blank:]]*[a-zA-Z_0-9-]+[[:blank:]]*' |cut -d '=' -f 1|cut -c 8-`)
+  p_value=$(echo `echo "${row_value}" |grep -o -E '^[[:blank:]]*my\_cnf\_[a-zA-Z_0-9-]+[[:blank:]]*=[[:blank:]]*[a-zA-Z_0-9-]+[[:blank:]]*' |cut -d '=' -f 2`)
+  if [ "${p_name}X" != "X" ];then
+      update_config_file ${p_name} ${p_value}  "${mysql_data_base}/my.cnf"
+  fi
+done < ${package_config_file}
+${mysqld} --defaults-file="${mysql_data_base}/my.cnf" --initialize-insecure 
+chown -R mysql:mysql "${work_dir}"
+echo ${work_dir%/}|awk -F '/' 'BEGIN{dirn="/"} {for(i=2;i<=NF;i++){dirn=(dirn""$i);print dirn;dirn=(dirn"/")} } '|xargs chmod o+x
+init_start_mysql "${mysqld_safe}" "${mysql_data_base}/my.cnf" "${mysql}" "${socket_file}"
+[ $? -eq 1 ] && echo "init seed mysql instance failed, abort it !" && exit 1
+${mysql} -uroot -S${socket_file}  <<!
+alter user ${conn_username}@"localhost" identified by "${conn_userpwd}";
+!
+
+
 isServiceFlag=
 is_service ${mysql_port}
 [ $? -eq 0 ] && isServiceFlag=true
@@ -361,11 +497,15 @@ done
 
 done < tmp_sort.lst
 
-
-for(( i=0;i<${#files[@]};i++)) 
+i=0
+for(( ;i<${#files[@]};i++)) 
 do
 exec_sql "source ${files[i]}"  "${mysql}"  "${socket_file}"
 done;
+
+last_version_num=`echo ${files[i-1]}|cut -d '/' -f 2`
+last_soft_version=`echo ${mysql_software_version}|cut -d '-' -f 1-2`
+znvdata_version="DCVSMYSQL_${last_version_num}_${last_soft_version}_${package_date}"
 
 #打包的时候，将git提交信息写入
 pv0=
@@ -380,10 +520,10 @@ else
 	pv0="${G_MODE_VALUE}"
 	pv1="${git_hash}|${git_time}"
 fi
-pv2="PUSH_GIT.SQL"
+pv2="${work_dir}/PUSH_GIT.SQL"
 sh ${cpwd}/push_git.sh  "${pv0}"  "${pv1}" "${pv2}"
 [ $? -eq 0 -a  -r "${pv2}"  -a  -s "${pv2}" ]  && exec_sql "source ${pv2}"  "${mysql}"  "${socket_file}"
-
+rm -f ${pv2}
 
 exec_sql "set global  innodb_fast_shutdown=0"   "${mysql}"  "${socket_file}"
 shutdown_mysql "${mysql}" "${socket_file}"  "${mysql_port}"
@@ -391,9 +531,8 @@ shutdown_mysql "${mysql}" "${socket_file}"  "${mysql_port}"
 check_log_error ${sqllog}
 [ $? -ne 0 ]  && echo "Some errors has happend during packaing, abort." && exit 1
 
-cd "${code_library}"
-[ `pwd` == ${code_library} ] && rm -fr ${znvdata_version}
-
+#[ `pwd` == ${code_library} ] && rm -fr ${znvdata_version}
+cd ${work_dir}
 mkdir -p ${znvdata_version}
 cp -a "${mysql_data_base}/data" ${znvdata_version} > /dev/null 2>&1
 cp -a "${mysql_data_base}/log" ${znvdata_version} > /dev/null 2>&1
@@ -445,9 +584,14 @@ prepareForCI.sh deployop.sh version.lst config.param "${znv_tools_template}.tar.
  "${mysql_software_version}.tar.gz"  install.sh  start.sh  stop.sh check.sh  uninstall.sh predefine.sh \
  param_for_deploy_platform.xlsx  ${backup_software_gzpath##*/} --remove-files
 
-start_mysql "${mysqld_safe}" \
-"${mysql_data_base}/my.cnf"  "${mysql}"  "${socket_file}" "${mysql_port}"
+cd ${work_dir}
+for w_d in "${mysql_data_base##*/}"  "${mysql_software_version}" 
+do
+if [[ ! "${w_d}" =~ '^/' ]] && [ "${w_d}X" != "X" ]; then  
+  rm -fr "${w_d}"
+fi
+done
 
-}>${cur_time}.log
+}>"${work_dir}/${cur_time}.log"
 
 exit 0 

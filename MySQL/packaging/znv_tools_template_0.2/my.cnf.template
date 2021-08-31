@@ -85,6 +85,5 @@ sql_mode                        =TRADITIONAL
 
 innodb_page_cleaners            =8
 innodb_flush_method             =O_DIRECT
-innodb_page_size                =64K
 lower_case_table_names          =1
 transaction_isolation           =READ-COMMITTED
